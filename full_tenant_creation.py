@@ -34,7 +34,7 @@ contract_name = raw_input('Contract name: ')
 # build the request using cobra syntax
 fvTenant = cobra.model.fv.Tenant(polUni, ownerKey=u'', name=ftenant_name, descr=u'', ownerTag=u'') 
 drawCont = cobra.model.draw.Cont(fvTenant)
-drawInst = cobra.model.draw.Inst(drawCont, info=u"{'epg-epg_name1':{'x':175,'y':20},'epg-epg_name2':{'x':-25,'y':20}}", oDn=u'uni/tn-Vtenant2/ap-ap_name')
+drawInst = cobra.model.draw.Inst(drawCont, info=u"{'epg-epg_name1':{'x':175,'y':20},'epg-epg_name2':{'x':-25,'y':20}}", oDn=u'uni/tn-ftenant_name/ap-ap_name')
 fvCtx = cobra.model.fv.Ctx(fvTenant, ownerKey=u'', name=VRF_name, descr=u'', knwMcastAct=u'permit', ownerTag=u'', pcEnfPref=u'enforced')
 fvRsCtxToExtRouteTagPol = cobra.model.fv.RsCtxToExtRouteTagPol(fvCtx, tnL3extRouteTagPolName=u'')
 fvRsBgpCtxPol = cobra.model.fv.RsBgpCtxPol(fvCtx, tnBgpCtxPolName=u'')
