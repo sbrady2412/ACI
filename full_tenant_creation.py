@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-'''
 
 # list of packages that should be imported for this code to work
 import cobra.mit.access
