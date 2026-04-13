@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Example: tenant + application profile (see ap-TestAP.json).
-Prefer ../create_tenant.py --tenant X --application-profile Y for new work.
+Example: create a minimal tenant (see tn-Tenant_ARYA.json in this folder).
+Prefer ../../scripts/create_tenant.py for new work.
 """
 
 from __future__ import print_function
@@ -24,8 +24,7 @@ def main():
     p.add_argument("--apic", default=os.environ.get("APIC_URL"))
     p.add_argument("--user", default=os.environ.get("APIC_USER", "admin"))
     p.add_argument("--password", default=os.environ.get("APIC_PASSWORD"))
-    p.add_argument("--tenant", default="Tenant_ARYA50")
-    p.add_argument("--application-profile", default="TestAP", dest="ap")
+    p.add_argument("--tenant", default="Tenant_ARYA", help="Tenant name to create")
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
     if not args.apic or not args.password:
@@ -44,9 +43,6 @@ def main():
     pol_uni = cobra.model.pol.Uni("")
     fv_tenant = cobra.model.fv.Tenant(
         pol_uni, ownerKey="", name=args.tenant, descr="", ownerTag=""
-    )
-    cobra.model.fv.Ap(
-        fv_tenant, ownerKey="", name=args.ap, prio="unspecified", ownerTag="", descr=""
     )
     cobra.model.fv.RsTenantMonPol(fv_tenant, tnMonEPGPolName="")
 

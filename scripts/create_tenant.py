@@ -3,12 +3,13 @@
 """
 Create a new ACI tenant on an APIC using the Cobra SDK.
 
-Examples:
-  python create_tenant.py --apic https://apic.example.com --user admin \\
-      --password secret --tenant TN-PROD
+Examples (from repository root):
+
+  python3 scripts/create_tenant.py --apic https://apic.example.com \\
+      --user admin --password secret --tenant TN-PROD
 
   APIC_URL=https://10.1.1.1 APIC_USER=admin APIC_PASSWORD=secret \\
-      python create_tenant.py --tenant TN-DEV --application-profile AP1
+      python3 scripts/create_tenant.py --tenant TN-DEV --application-profile AP1
 """
 
 from __future__ import print_function

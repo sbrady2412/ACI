@@ -2,3 +2,5 @@
 # Obtain the wheels for your release from Cisco APIC / DCNM documentation or
 # your APIC’s software download area, then:
 #   pip install ./acicobra-<ver>-py3-none-any.whl ./acimodel-<ver>-py3-none-any.whl
+#
+# Run tools from the repo root, e.g. python3 scripts/aci_report_tenants.py
