@@ -1,6 +1,22 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Create a tenant with VRF, two bridge domains, an application profile, two EPGs,
+and provider/consumer references to an existing contract (vzBrCP).
 
-# list of packages that should be imported for this code to work
+Requires Cobra SDK packages built for your APIC version. Credentials via
+flags or APIC_URL, APIC_USER, APIC_PASSWORD.
+
+The contract named by --contract must already exist under the tenant (or use
+the APIC UI to create the vzBrCP first).
+"""
+
+from __future__ import print_function
+
+import argparse
+import os
+import sys
+
 import cobra.mit.access
 import cobra.mit.request
 import cobra.mit.session
@@ -10,65 +26,161 @@ import cobra.model.pol
 import cobra.model.vz
 from cobra.internal.codec.xmlcodec import toXMLStr
 
-# log into an APIC and create a directory object
-ls = cobra.mit.session.LoginSession('http://172.31.216.24', 'admin', 'scotch123')
-md = cobra.mit.access.MoDirectory(ls)
-md.login()
 
-# the top level object on which operations will be made
-polUni = cobra.model.pol.Uni('')
-
-
-ftenant_name = raw_input('Name of Tenant: ')
-ap_name = raw_input('Application Profile name: ')
-VRF_name = raw_input('VRF name: ')
-epg_name1 = raw_input('EPG 1 name: ')
-epg_name2 = raw_input('EPG 2 name: ')
-BD1_name = raw_input('BD1 name: ')
-BD1_ip = raw_input('BD1 IP/Mask: ')
-BD2_name = raw_input('BD2 name: ')
-BD2_ip = raw_input('BD2 IP/Mask: ')
-contract_name = raw_input('Contract name: ')
-
-# build the request using cobra syntax
-fvTenant = cobra.model.fv.Tenant(polUni, ownerKey=u'', name=ftenant_name, descr=u'', ownerTag=u'') 
-drawCont = cobra.model.draw.Cont(fvTenant)
-drawInst = cobra.model.draw.Inst(drawCont, info=u"{'epg-epg_name1':{'x':175,'y':20},'epg-epg_name2':{'x':-25,'y':20}}", oDn=u'uni/tn-ftenant_name/ap-ap_name')
-fvCtx = cobra.model.fv.Ctx(fvTenant, ownerKey=u'', name=VRF_name, descr=u'', knwMcastAct=u'permit', ownerTag=u'', pcEnfPref=u'enforced')
-fvRsCtxToExtRouteTagPol = cobra.model.fv.RsCtxToExtRouteTagPol(fvCtx, tnL3extRouteTagPolName=u'')
-fvRsBgpCtxPol = cobra.model.fv.RsBgpCtxPol(fvCtx, tnBgpCtxPolName=u'')
-vzAny = cobra.model.vz.Any(fvCtx, matchT=u'AtleastOne', name=u'', descr=u'')
-fvRsOspfCtxPol = cobra.model.fv.RsOspfCtxPol(fvCtx, tnOspfCtxPolName=u'')
-fvRsCtxToEpRet = cobra.model.fv.RsCtxToEpRet(fvCtx, tnFvEpRetPolName=u'')
-fvBD = cobra.model.fv.BD(fvTenant, ownerKey=u'', name=BD1_name, descr=u'', unkMacUcastAct=u'proxy', arpFlood=u'no', limitIpLearnToSubnets=u'no', llAddr=u'::', mac=u'00:22:BD:F8:19:FF', epMoveDetectMode=u'', unicastRoute=u'yes', ownerTag=u'', multiDstPktAct=u'bd-flood', unkMcastAct=u'flood')
-fvRsBDToNdP = cobra.model.fv.RsBDToNdP(fvBD, tnNdIfPolName=u'')
-fvRsCtx = cobra.model.fv.RsCtx(fvBD, tnFvCtxName=VRF_name)
-fvRsIgmpsn = cobra.model.fv.RsIgmpsn(fvBD, tnIgmpSnoopPolName=u'')
-fvSubnet = cobra.model.fv.Subnet(fvBD, name=u'', descr=u'', ctrl=u'', ip=BD2_ip, preferred=u'no')
-fvRsBdToEpRet = cobra.model.fv.RsBdToEpRet(fvBD, resolveAct=u'resolve', tnFvEpRetPolName=u'')
-fvBD2 = cobra.model.fv.BD(fvTenant, ownerKey=u'', name=BD2_name, descr=u'', unkMacUcastAct=u'proxy', arpFlood=u'no', limitIpLearnToSubnets=u'no', llAddr=u'::', mac=u'00:22:BD:F8:19:FF', epMoveDetectMode=u'', unicastRoute=u'yes', ownerTag=u'', multiDstPktAct=u'bd-flood', unkMcastAct=u'flood')
-fvRsBDToNdP2 = cobra.model.fv.RsBDToNdP(fvBD2, tnNdIfPolName=u'')
-fvRsCtx2 = cobra.model.fv.RsCtx(fvBD2, tnFvCtxName=VRF_name)
-fvRsIgmpsn2 = cobra.model.fv.RsIgmpsn(fvBD2, tnIgmpSnoopPolName=u'')
-fvSubnet2 = cobra.model.fv.Subnet(fvBD2, name=u'', descr=u'', ctrl=u'', ip=BD1_ip, preferred=u'no')
-fvRsBdToEpRet2 = cobra.model.fv.RsBdToEpRet(fvBD2, resolveAct=u'resolve', tnFvEpRetPolName=u'')
-#vzFilter = cobra.model.vz.Filter(fvTenant, ownerKey=u'', name=u'SSH', descr=u'', ownerTag=u'')
-#vzEntry = cobra.model.vz.Entry(vzFilter, tcpRules=u'', arpOpc=u'unspecified', applyToFrag=u'no', dToPort=u'22', descr=u'', prot=u'tcp', icmpv4T=u'unspecified', sFromPort=u'unspecified', stateful=u'no', icmpv6T=u'unspecified', sToPort=u'unspecified', etherT=u'ip', dFromPort=u'22', name=u'TCP-SSH')
-fvRsTenantMonPol = cobra.model.fv.RsTenantMonPol(fvTenant, tnMonEPGPolName=u'')
-fvAp = cobra.model.fv.Ap(fvTenant, ownerKey=u'', prio=u'unspecified', name=ap_name, descr=u'', ownerTag=u'')
-fvAEPg = cobra.model.fv.AEPg(fvAp, prio=u'unspecified', matchT=u'AtleastOne', name=epg_name1, descr=u'')
-fvRsCustQosPol = cobra.model.fv.RsCustQosPol(fvAEPg, tnQosCustomPolName=u'')
-fvRsBd = cobra.model.fv.RsBd(fvAEPg, tnFvBDName=BD1_name)
-fvRsProv = cobra.model.fv.RsProv(fvAEPg, tnVzBrCPName=contract_name, matchT=u'AtleastOne', prio=u'unspecified')
-fvAEPg2 = cobra.model.fv.AEPg(fvAp, prio=u'unspecified', matchT=u'AtleastOne', name=epg_name2, descr=u'')
-fvRsCons = cobra.model.fv.RsCons(fvAEPg2, tnVzBrCPName=contract_name, prio=u'unspecified')
-fvRsCustQosPol2 = cobra.model.fv.RsCustQosPol(fvAEPg2, tnQosCustomPolName=u'')
-fvRsBd2 = cobra.model.fv.RsBd(fvAEPg2, tnFvBDName=BD2_name)
+def _parse_args():
+    p = argparse.ArgumentParser(description="Full tenant + VRF + 2x BD + 2x EPG (ACI Cobra).")
+    p.add_argument("--apic", default=os.environ.get("APIC_URL"), help="APIC URL (or APIC_URL)")
+    p.add_argument("--user", default=os.environ.get("APIC_USER", "admin"))
+    p.add_argument("--password", default=os.environ.get("APIC_PASSWORD"))
+    p.add_argument("--tenant", required=True, help="Tenant name")
+    p.add_argument("--application-profile", required=True, dest="ap_name")
+    p.add_argument("--vrf", required=True, dest="vrf_name")
+    p.add_argument("--epg1", required=True)
+    p.add_argument("--epg2", required=True)
+    p.add_argument("--bd1", required=True)
+    p.add_argument("--bd1-subnet", required=True, metavar="CIDR", help="e.g. 10.1.1.1/24")
+    p.add_argument("--bd2", required=True)
+    p.add_argument("--bd2-subnet", required=True, metavar="CIDR", help="e.g. 10.1.2.1/24")
+    p.add_argument("--contract", required=True, help="Existing vzBrCP name under this tenant")
+    p.add_argument("--dry-run", action="store_true", help="Print XML only, no commit")
+    return p.parse_args()
 
 
-# commit the generated code to APIC
-print toXMLStr(polUni)
-c = cobra.mit.request.ConfigRequest()
-c.addMo(polUni)
-md.commit(c)
+def main():
+    args = _parse_args()
+    if not args.apic:
+        print("error: set --apic or APIC_URL", file=sys.stderr)
+        sys.exit(2)
+    if not args.password:
+        print("error: set --password or APIC_PASSWORD", file=sys.stderr)
+        sys.exit(2)
 
+    apic_url = args.apic.rstrip("/")
+    if not apic_url.startswith(("http://", "https://")):
+        apic_url = "https://" + apic_url
+
+    ls = cobra.mit.session.LoginSession(apic_url, args.user, args.password)
+    md = cobra.mit.access.MoDirectory(ls)
+    if not args.dry_run:
+        md.login()
+
+    pol_uni = cobra.model.pol.Uni("")
+    tn = args.tenant
+    ap = args.ap_name
+    vrf = args.vrf_name
+
+    fv_tenant = cobra.model.fv.Tenant(pol_uni, ownerKey="", name=tn, descr="", ownerTag="")
+    draw_cont = cobra.model.draw.Cont(fv_tenant)
+    draw_info = (
+        "{{'epg-{0}':{{'x':175,'y':20}},'epg-{1}':{{'x':-25,'y':20}}}}"
+    ).format(args.epg1, args.epg2)
+    cobra.model.draw.Inst(
+        draw_cont,
+        info=draw_info,
+        oDn="uni/tn-{0}/ap-{1}".format(tn, ap),
+    )
+
+    fv_ctx = cobra.model.fv.Ctx(
+        fv_tenant,
+        ownerKey="",
+        name=vrf,
+        descr="",
+        knwMcastAct="permit",
+        ownerTag="",
+        pcEnfPref="enforced",
+    )
+    cobra.model.fv.RsCtxToExtRouteTagPol(fv_ctx, tnL3extRouteTagPolName="")
+    cobra.model.fv.RsBgpCtxPol(fv_ctx, tnBgpCtxPolName="")
+    cobra.model.vz.Any(fv_ctx, matchT="AtleastOne", name="", descr="")
+    cobra.model.fv.RsOspfCtxPol(fv_ctx, tnOspfCtxPolName="")
+    cobra.model.fv.RsCtxToEpRet(fv_ctx, tnFvEpRetPolName="")
+
+    fv_bd1 = cobra.model.fv.BD(
+        fv_tenant,
+        ownerKey="",
+        name=args.bd1,
+        descr="",
+        unkMacUcastAct="proxy",
+        arpFlood="no",
+        limitIpLearnToSubnets="no",
+        llAddr="::",
+        mac="00:22:BD:F8:19:FF",
+        epMoveDetectMode="",
+        unicastRoute="yes",
+        ownerTag="",
+        multiDstPktAct="bd-flood",
+        unkMcastAct="flood",
+    )
+    cobra.model.fv.RsBDToNdP(fv_bd1, tnNdIfPolName="")
+    cobra.model.fv.RsCtx(fv_bd1, tnFvCtxName=vrf)
+    cobra.model.fv.RsIgmpsn(fv_bd1, tnIgmpSnoopPolName="")
+    cobra.model.fv.Subnet(
+        fv_bd1, name="", descr="", ctrl="", ip=args.bd1_subnet, preferred="no"
+    )
+    cobra.model.fv.RsBdToEpRet(
+        fv_bd1, resolveAct="resolve", tnFvEpRetPolName=""
+    )
+
+    fv_bd2 = cobra.model.fv.BD(
+        fv_tenant,
+        ownerKey="",
+        name=args.bd2,
+        descr="",
+        unkMacUcastAct="proxy",
+        arpFlood="no",
+        limitIpLearnToSubnets="no",
+        llAddr="::",
+        mac="00:22:BD:F8:19:FF",
+        epMoveDetectMode="",
+        unicastRoute="yes",
+        ownerTag="",
+        multiDstPktAct="bd-flood",
+        unkMcastAct="flood",
+    )
+    cobra.model.fv.RsBDToNdP(fv_bd2, tnNdIfPolName="")
+    cobra.model.fv.RsCtx(fv_bd2, tnFvCtxName=vrf)
+    cobra.model.fv.RsIgmpsn(fv_bd2, tnIgmpSnoopPolName="")
+    cobra.model.fv.Subnet(
+        fv_bd2, name="", descr="", ctrl="", ip=args.bd2_subnet, preferred="no"
+    )
+    cobra.model.fv.RsBdToEpRet(
+        fv_bd2, resolveAct="resolve", tnFvEpRetPolName=""
+    )
+
+    cobra.model.fv.RsTenantMonPol(fv_tenant, tnMonEPGPolName="")
+    fv_ap = cobra.model.fv.Ap(
+        fv_tenant, ownerKey="", prio="unspecified", name=ap, descr="", ownerTag=""
+    )
+
+    fv_aepg1 = cobra.model.fv.AEPg(
+        fv_ap, prio="unspecified", matchT="AtleastOne", name=args.epg1, descr=""
+    )
+    cobra.model.fv.RsCustQosPol(fv_aepg1, tnQosCustomPolName="")
+    cobra.model.fv.RsBd(fv_aepg1, tnFvBDName=args.bd1)
+    cobra.model.fv.RsProv(
+        fv_aepg1,
+        tnVzBrCPName=args.contract,
+        matchT="AtleastOne",
+        prio="unspecified",
+    )
+
+    fv_aepg2 = cobra.model.fv.AEPg(
+        fv_ap, prio="unspecified", matchT="AtleastOne", name=args.epg2, descr=""
+    )
+    cobra.model.fv.RsCons(fv_aepg2, tnVzBrCPName=args.contract, prio="unspecified")
+    cobra.model.fv.RsCustQosPol(fv_aepg2, tnQosCustomPolName="")
+    cobra.model.fv.RsBd(fv_aepg2, tnFvBDName=args.bd2)
+
+    print(toXMLStr(fv_tenant))
+
+    if args.dry_run:
+        return
+
+    c = cobra.mit.request.ConfigRequest()
+    c.addMo(fv_tenant)
+    md.commit(c)
+    print("Committed uni/tn-{0}".format(tn), file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
